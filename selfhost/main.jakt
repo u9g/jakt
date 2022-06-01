@@ -876,6 +876,7 @@ struct ParsedCall {
 
 boxed enum ParsedType {
     Name(name: String, span: JaktSpan)
+    Tuple(types: [ParsedType], span: JaktSpan)
     Array(inner: ParsedType, span: JaktSpan)
     Dictionary(key: ParsedType, value: ParsedType, span: JaktSpan)
     Set(inner: ParsedType, span: JaktSpan)
@@ -1269,6 +1270,23 @@ struct Parser {
             }
             LParen => {
                 // (A, B, C) is shorthand for Tuple<A, B, C>
+                let mutable parsed_types: [ParsedType] = []
+                while not .eof() {
+                    match .current() {
+                        RParen => {
+                            .index++
+                            return ParsedType::Tuple(types: parsed_types, span: JaktSpan(start, end: .current().span().end))
+                        }
+                        Comma => {
+                            .index++
+                        }
+                        else => {
+                            parsed_types.push(.parse_typename())
+                        }
+                    }
+                }
+                .error("expected )", .current().span())
+                return ParsedType::Empty()
                 todo("Implement tuple type shorthand")
             }
             else => { }
